@@ -1,6 +1,6 @@
 /* classes */ 
 
-// Color constructor
+// Color constructor (Taken from drawstuff.js)
 class Color {
     constructor(r,g,b,a) {
         try {
@@ -40,7 +40,7 @@ class Color {
     } // end Color change method
 } // end color class
 
-// Vector class
+// Vector class (taken from exercise4)
 class Vector { 
     constructor(x,y,z) {
         this.set(x,y,z);
