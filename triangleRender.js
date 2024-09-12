@@ -1,6 +1,6 @@
 /* classes */ 
 
-// Color constructor (Taken from drawstuff.js)
+// Color constructor
 class Color {
     constructor(r,g,b,a) {
         try {
@@ -40,7 +40,7 @@ class Color {
     } // end Color change method
 } // end color class
 
-// Vector class (taken from exercise4)
+// Vector class
 class Vector { 
     constructor(x,y,z) {
         this.set(x,y,z);
@@ -273,14 +273,16 @@ function renderTriangles(context) {
                 let n = inputTriangles.length; // the number of input files
                 // step 1: find pixels of vertex in world space
                 // for that first normalize x and y
-                let xN = ((2 * x) / w) - 1; // xN is normalized X
-                let yN = 1 - ((2 * y) / h); // yN is normalized X
+                let xN = x / w; // xN is normalized X
+                let yN = y / h; // yN is normalized X
                 // add x and y co-ordinates of center in normalized x and y to calculate x and y in world space 
-                let xW = center.x + xN; // xW is x co-ordinate of screen pixel in world space
-                let yW = center.y + yN; // yW is y co-ordinate of screen pixel in world space
-                let zW = viewWindow; // keeping it 0 for now
+                let xW = xN; // xW is x co-ordinate of screen pixel in world space
+                let yW = yN; // yW is y co-ordinate of screen pixel in world space
+                let zW = 0; // keeping it 0 for now
                 let pointInWorldSpace = new Vector(xW, yW, zW);
                 // pointInWorldSpace.toConsole();
+
+                let closestRayDistance = Number.MAX_SAFE_INTEGER;
 
                 // step2: find ray direction from eye to pixel (D)
                 let rayDirection = Vector.subtract(pointInWorldSpace, eye);
@@ -322,11 +324,11 @@ function renderTriangles(context) {
 
                         // triangle normal (N)
                         // calculate vectors of 2 sides of a triangle
-                        let vector1 = Vector.subtract(vertex1, vertex2);
-                        let vector2 = Vector.subtract(vertex1, vertex3);
+                        let side21 = Vector.subtract(vertex1, vertex2);
+                        let side31 = Vector.subtract(vertex1, vertex3);
                         // vector1.toConsole();
                         // vector2.toConsole();
-                        let triangleNormal = Vector.cross(vector1, vector2);
+                        let triangleNormal = Vector.cross(side21, side31);
                         // triangleNormal.toConsole();
                         // triangle plane constant (d)
                         let trianglePlaneConst = Vector.dot(triangleNormal, vertex1);
@@ -340,13 +342,14 @@ function renderTriangles(context) {
                         if(deno!=0) {
                             let rayDistance = nume / deno;
                             // console.log(rayDistance);
-                            if(rayDistance <= distBetweenEyeAndWindow) {
+                            if(rayDistance >= distBetweenEyeAndWindow && rayDistance < closestRayDistance) {
                                 // step4: calculate Intersection point (I)
                                 let intersection = Vector.add(eye, Vector.scale(rayDistance, rayDirection));
                                 
                                 // step 5: check if intersection lies inside triangle or not
                                 if(isPointInTriangle(intersection, triangleNormal, vertex1, vertex2, vertex3)) {
-                                    drawPixel(imagedata, x, y, c);
+                                    closestRayDistance = rayDistance;
+                                    drawPixel(imagedata, x, h - y, c);
                                 }
                             }
                         }
