@@ -250,6 +250,30 @@ function isPointInTriangle(intersection, triangleNormal, vertex1, vertex2, verte
     return false;
 }
 
+function calColor(normal, lightVector, lightColor, eye, diffuse, ambient, specular, n) {
+    let color = [0, 0, 0];
+    normal = Vector.normalize(normal);
+    lightVector = Vector.normalize(lightVector);
+    eye = Vector.normalize(eye);
+    let hV = Vector.normalize(Vector.add(lightVector, eye));
+    // hV.toConsole();
+    let NdotL = Vector.dot(normal, lightVector);
+    // console.log(NdotL);
+    let NdotH = Vector.dot(normal, hV);
+    // console.log(NdotH);
+    for(let i=0; i<3; i++) {
+        color[i] += ambient[i] * lightColor[i];
+        color[i] += diffuse[i] * lightColor[i] * Math.max(NdotL, 0);
+        color[i] += specular[i] * lightColor[i] * Math.pow(Math.max(NdotH, 0), n);
+    }
+    // console.log(color);
+    for(let i=0; i<3; i++) {
+        color[i] = Math.min(color[i], 1);
+    }
+    // console.log(color);
+    return new Color(color[0] * 255, color[1] * 255, color[2] * 255, 255);
+}
+
 //put random points in the triangles from the class github
 function renderTriangles(context) {
     let inputTriangles = getInputTriangles();
@@ -316,12 +340,6 @@ function renderTriangles(context) {
                         // vertex2.toConsole();
                         // vertex3.toConsole();
 
-                        c.change(
-                            inputTriangles[f].material.diffuse[0]*255,
-                            inputTriangles[f].material.diffuse[1]*255,
-                            inputTriangles[f].material.diffuse[2]*255,
-                            255);
-
                         // triangle normal (N)
                         // calculate vectors of 2 sides of a triangle
                         let side21 = Vector.subtract(vertex1, vertex2);
@@ -348,9 +366,72 @@ function renderTriangles(context) {
                                 
                                 // step 5: check if intersection lies inside triangle or not
                                 if(isPointInTriangle(intersection, triangleNormal, vertex1, vertex2, vertex3)) {
+                                    // calculating color
+
+                                    //diffuse
+                                    let diffuse = [
+                                        inputTriangles[f].material.diffuse[0],
+                                        inputTriangles[f].material.diffuse[1],
+                                        inputTriangles[f].material.diffuse[2],
+                                    ];
+                                    // console.log(diffuse);
+
+                                    //ambient
+                                    let ambient = [
+                                        inputTriangles[f].material.ambient[0],
+                                        inputTriangles[f].material.ambient[1],
+                                        inputTriangles[f].material.ambient[2],
+                                    ];
+                                    // console.log(ambient);
+
+                                    //specular
+                                    let specular = [
+                                        inputTriangles[f].material.specular[0],
+                                        inputTriangles[f].material.specular[1],
+                                        inputTriangles[f].material.specular[2],
+                                    ];
+                                    // console.log(specular);
+
+                                    let n = inputTriangles[f].material.n;
+                                    // console.log(n);
+                                    // let lightColor = [1, 1, 1];
+                                    // let lightVector = new Vector(-3, 1, -0.5);
+                                    // lightVector = Vector.subtract(lightVector, pointInWorldSpace);
+                                    // // eye = Vector.subtract(eye, pointInWorldSpace);
+
+                                    // c = calColor(triangleNormal, lightVector, lightColor, eye, diffuse, ambient, specular, n);
+                                    let oppTriangleNormal = new Vector(triangleNormal.x*-1, triangleNormal.y*-1, triangleNormal.z*-1)
+                                    let lightColor = [1, 1, 1];
+                                    let lightPoint = new Vector(-3, 1, -0.5);
+                                    let lightVector = Vector.normalize(Vector.subtract(lightPoint, pointInWorldSpace));
+                                    let eyeVector = Vector.normalize(Vector.subtract(eye, pointInWorldSpace));
+                                    let halfVector = Vector.normalize(Vector.add(lightVector, eyeVector));
+                                    let nl = Vector.dot(Vector.normalize(triangleNormal), lightVector);
+                                    let nh = Vector.dot(Vector.normalize(triangleNormal), halfVector);
+                                    if(f==1) {
+                                        nl = Vector.dot(Vector.normalize(oppTriangleNormal), lightVector);
+                                        nh = Vector.dot(Vector.normalize(oppTriangleNormal), halfVector);
+                                    }
+
+                                    let ambientR = ambient[0];
+                                    let diffuseR = diffuse[0] * Math.max(nl, 0);
+                                    let specularR = specular[0] * Math.pow(Math.max(nh, 0), n);
+                                    let colorR = Math.min(ambientR + diffuseR + specularR, 1);
+
+                                    let ambientG = ambient[1];
+                                    let diffuseG = diffuse[1] * Math.max(nl, 0);
+                                    let specularG = specular[1] * Math.pow(Math.max(nh, 0), n);
+                                    let colorG = Math.min(ambientG + diffuseG + specularG, 1);
+
+                                    let ambientB = ambient[2];
+                                    let diffuseB = diffuse[2] * Math.max(nl, 0);
+                                    let specularB = specular[2] * Math.pow(Math.max(nh, 0), n);
+                                    let colorB = Math.min(ambientB + diffuseB + specularB, 1);
+
+                                    c.change(colorR*255, colorG*255, colorB*255, 255);
                                     closestRayDistance = rayDistance;
                                     drawPixel(imagedata, x, h - y, c);
-                                }
+                                } 
                             }
                         }
                     }
