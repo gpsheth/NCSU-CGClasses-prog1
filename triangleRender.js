@@ -1,6 +1,5 @@
-/* classes */ 
-
-// Color constructor
+/* classes */
+// Color class
 class Color {
     constructor(r,g,b,a) {
         try {
@@ -180,27 +179,6 @@ class Vector {
 
 /* utility functions */
 
-//get the input triangles from the standard class URL
-function getInputTriangles() {
-    const INPUT_TRIANGLES_URL = 
-        "https://ncsucgclass.github.io/prog1/triangles2.json";
-        
-    // load the triangles file
-    var httpReq = new XMLHttpRequest(); // a new http request
-    httpReq.open("GET",INPUT_TRIANGLES_URL,false); // init the request
-    httpReq.send(null); // send the request
-    var startTime = Date.now();
-    while ((httpReq.status !== 200) && (httpReq.readyState !== XMLHttpRequest.DONE)) {
-        if ((Date.now()-startTime) > 3000)
-            break;
-    } // until its loaded or we time out after three seconds
-    if ((httpReq.status !== 200) || (httpReq.readyState !== XMLHttpRequest.DONE)) {
-        console.log*("Unable to open input triangles file!");
-        return String.null;
-    } else
-        return JSON.parse(httpReq.response); 
-} // end get input triangles
-
 // draw a pixel at x,y using color
 function drawPixel(imagedata,x,y,color) {
     try {
@@ -224,6 +202,48 @@ function drawPixel(imagedata,x,y,color) {
         console.log(e);
     }
 } // end drawPixel
+
+//get the input triangles from the standard class URL
+function getInputTriangles() {
+    const INPUT_TRIANGLES_URL = 
+        "https://ncsucgclass.github.io/prog1/triangles2.json";
+        
+    // load the triangles file
+    var httpReq = new XMLHttpRequest(); // a new http request
+    httpReq.open("GET",INPUT_TRIANGLES_URL,false); // init the request
+    httpReq.send(null); // send the request
+    var startTime = Date.now();
+    while ((httpReq.status !== 200) && (httpReq.readyState !== XMLHttpRequest.DONE)) {
+        if ((Date.now()-startTime) > 3000)
+            break;
+    } // until its loaded or we time out after three seconds
+    if ((httpReq.status !== 200) || (httpReq.readyState !== XMLHttpRequest.DONE)) {
+        console.log*("Unable to open input triangles file!");
+        return String.null;
+    } else
+        return JSON.parse(httpReq.response); 
+} // end get input triangles
+
+//get the input triangles from the standard class URL
+function getInputLights() {
+    const INPUT_TRIANGLES_URL = 
+        "https://ncsucgclass.github.io/prog1/lights.json";
+        
+    // load the triangles file
+    var httpReq = new XMLHttpRequest(); // a new http request
+    httpReq.open("GET",INPUT_TRIANGLES_URL,false); // init the request
+    httpReq.send(null); // send the request
+    var startTime = Date.now();
+    while ((httpReq.status !== 200) && (httpReq.readyState !== XMLHttpRequest.DONE)) {
+        if ((Date.now()-startTime) > 3000)
+            break;
+    } // until its loaded or we time out after three seconds
+    if ((httpReq.status !== 200) || (httpReq.readyState !== XMLHttpRequest.DONE)) {
+        console.log*("Unable to open input triangles file!");
+        return String.null;
+    } else
+        return JSON.parse(httpReq.response); 
+} // end get input triangles
 
 function isPointInTriangle(intersection, triangleNormal, vertex1, vertex2, vertex3) {
     // check if vertex is in clockwise direction of each side of triangle
@@ -250,33 +270,35 @@ function isPointInTriangle(intersection, triangleNormal, vertex1, vertex2, verte
     return false;
 }
 
-function calColor(normal, lightVector, lightColor, eye, diffuse, ambient, specular, n) {
+function calColor(triangleNormal, lightPoint, pointInWorldSpace, eye, lightAmbient, lightDiffuse, lightSpecular, diffuse, ambient, specular, n) {
+    let oppTriangleNormal = new Vector(triangleNormal.x*-1, triangleNormal.y*-1, triangleNormal.z*-1);
+    let lightVector = Vector.normalize(Vector.subtract(lightPoint, pointInWorldSpace));
+    let eyeVector = Vector.normalize(Vector.subtract(eye, pointInWorldSpace));
+    let halfVector = Vector.normalize(Vector.add(lightVector, eyeVector));
+    let nv = Vector.dot(Vector.normalize(triangleNormal), eyeVector);
+    if(nv<0) {
+        var nl = Vector.dot(Vector.normalize(oppTriangleNormal), lightVector);
+        var nh = Vector.dot(Vector.normalize(oppTriangleNormal), halfVector);
+    } else {
+        var nl = Vector.dot(Vector.normalize(triangleNormal), lightVector);
+        var nh = Vector.dot(Vector.normalize(triangleNormal), halfVector);
+    }
+    // console.log(lightSpecular)
     let color = [0, 0, 0];
-    normal = Vector.normalize(normal);
-    lightVector = Vector.normalize(lightVector);
-    eye = Vector.normalize(eye);
-    let hV = Vector.normalize(Vector.add(lightVector, eye));
-    // hV.toConsole();
-    let NdotL = Vector.dot(normal, lightVector);
-    // console.log(NdotL);
-    let NdotH = Vector.dot(normal, hV);
-    // console.log(NdotH);
+
     for(let i=0; i<3; i++) {
-        color[i] += ambient[i] * lightColor[i];
-        color[i] += diffuse[i] * lightColor[i] * Math.max(NdotL, 0);
-        color[i] += specular[i] * lightColor[i] * Math.pow(Math.max(NdotH, 0), n);
+        color[i] += ambient[i] * lightAmbient[i];
+        color[i] += diffuse[i] * lightDiffuse[i] * Math.max(nl, 0);
+        color[i] += specular[i] * lightSpecular[i] * Math.pow(Math.max(nh, 0), n);
     }
-    // console.log(color);
-    for(let i=0; i<3; i++) {
-        color[i] = Math.min(color[i], 1);
-    }
-    // console.log(color);
-    return new Color(color[0] * 255, color[1] * 255, color[2] * 255, 255);
+
+    return new Color(color[0]*255, color[1]*255, color[2]*255, 255);
 }
 
 //put random points in the triangles from the class github
 function renderTriangles(context) {
     let inputTriangles = getInputTriangles();
+    let inputLights = getInputLights();
     let w = context.canvas.width;
     let h = context.canvas.height;
     let imagedata = context.createImageData(w,h);
@@ -292,17 +314,12 @@ function renderTriangles(context) {
 
     for(let x=0; x<=w; x++) {
         for(let y=0; y<=h; y++) {
-            if (inputTriangles != String.null) { 
-                let c = new Color(0,0,0,0); // init the triangle color
-                let n = inputTriangles.length; // the number of input files
-                // step 1: find pixels of vertex in world space
-                // for that first normalize x and y
-                let xN = x / w; // xN is normalized X
-                let yN = y / h; // yN is normalized X
-                // add x and y co-ordinates of center in normalized x and y to calculate x and y in world space 
-                let xW = xN; // xW is x co-ordinate of screen pixel in world space
-                let yW = yN; // yW is y co-ordinate of screen pixel in world space
-                let zW = 0; // keeping it 0 for now
+            let c = new Color(0, 0, 0, 0);
+            if (inputTriangles != String.null) {
+                let n = inputTriangles.length;
+                let xW = x / w;
+                let yW = y / h;
+                let zW = 0; 
                 let pointInWorldSpace = new Vector(xW, yW, zW);
                 // pointInWorldSpace.toConsole();
 
@@ -392,45 +409,21 @@ function renderTriangles(context) {
                                     ];
                                     // console.log(specular);
 
-                                    let n = inputTriangles[f].material.n;
-                                    // console.log(n);
-                                    // let lightColor = [1, 1, 1];
-                                    // let lightVector = new Vector(-3, 1, -0.5);
-                                    // lightVector = Vector.subtract(lightVector, pointInWorldSpace);
-                                    // // eye = Vector.subtract(eye, pointInWorldSpace);
+                                    let N = inputTriangles[f].material.n;
 
-                                    // c = calColor(triangleNormal, lightVector, lightColor, eye, diffuse, ambient, specular, n);
-                                    let oppTriangleNormal = new Vector(triangleNormal.x*-1, triangleNormal.y*-1, triangleNormal.z*-1)
-                                    let lightColor = [1, 1, 1];
-                                    let lightPoint = new Vector(-3, 1, -0.5);
-                                    let lightVector = Vector.normalize(Vector.subtract(lightPoint, pointInWorldSpace));
-                                    let eyeVector = Vector.normalize(Vector.subtract(eye, pointInWorldSpace));
-                                    let halfVector = Vector.normalize(Vector.add(lightVector, eyeVector));
-                                    let nl = Vector.dot(Vector.normalize(triangleNormal), lightVector);
-                                    let nh = Vector.dot(Vector.normalize(triangleNormal), halfVector);
-                                    if(f==1) {
-                                        nl = Vector.dot(Vector.normalize(oppTriangleNormal), lightVector);
-                                        nh = Vector.dot(Vector.normalize(oppTriangleNormal), halfVector);
+                                    if (inputLights != String.null) {
+                                        var m = inputLights.length;
+                                        for (var l=0; l<m; l++) {
+                                            let lightAmbient = inputLights[l].ambient;
+                                            let lightDiffuse = inputLights[l].diffuse;
+                                            let lightSpecular = inputLights[l].specular;
+                                            let lightPoint = new Vector(inputLights[l].x, inputLights[l].y, inputLights[l].z);
+                                            c = calColor(triangleNormal, lightPoint, intersection, eye, lightAmbient, lightDiffuse, lightSpecular, diffuse, ambient, specular, N);
+
+                                            closestRayDistance = rayDistance;
+                                            drawPixel(imagedata, x, h - y, c);
+                                        }
                                     }
-
-                                    let ambientR = ambient[0];
-                                    let diffuseR = diffuse[0] * Math.max(nl, 0);
-                                    let specularR = specular[0] * Math.pow(Math.max(nh, 0), n);
-                                    let colorR = Math.min(ambientR + diffuseR + specularR, 1);
-
-                                    let ambientG = ambient[1];
-                                    let diffuseG = diffuse[1] * Math.max(nl, 0);
-                                    let specularG = specular[1] * Math.pow(Math.max(nh, 0), n);
-                                    let colorG = Math.min(ambientG + diffuseG + specularG, 1);
-
-                                    let ambientB = ambient[2];
-                                    let diffuseB = diffuse[2] * Math.max(nl, 0);
-                                    let specularB = specular[2] * Math.pow(Math.max(nh, 0), n);
-                                    let colorB = Math.min(ambientB + diffuseB + specularB, 1);
-
-                                    c.change(colorR*255, colorG*255, colorB*255, 255);
-                                    closestRayDistance = rayDistance;
-                                    drawPixel(imagedata, x, h - y, c);
                                 } 
                             }
                         }
@@ -449,6 +442,15 @@ function main() {
     // Get the canvas and context
     var canvas = document.getElementById("viewport"); 
     var context = canvas.getContext("2d");
-    
     renderTriangles(context);
+    
+    // document.addEventListener('keydown', function(event) {
+    //     if (event.code === 'Space') {
+    //         // Your code here when the space bar is pressed
+    //         console.log('Space bar was pressed!');
+    //         var canvas = document.getElementById("viewport"); 
+    //         var context = canvas.getContext("2d");
+    //         renderSpheres(context);
+    //     }
+    // });
 }
